@@ -265,8 +265,8 @@ fn (mut sys System) decode() {
 				}
 				// bcd conversion
 				0x33 {
-					sys.memory[int(sys.i)] = u8(sys.v[int(x)] / 100 % 10)
-					sys.memory[int(sys.i) + 1] = u8(sys.v[int(x)] / 10 % 10)
+					sys.memory[int(sys.i)] = u8(sys.v[int(x)] / 100)
+					sys.memory[int(sys.i) + 1] = u8((sys.v[int(x)] % 100) / 10)
 					sys.memory[int(sys.i) + 2] = u8(sys.v[int(x)] % 10)
 				}
 				// store
