@@ -4,6 +4,7 @@ import gg
 import gx
 import os
 import rand
+import sokol.sapp
 
 const scale = 20
 
@@ -66,6 +67,15 @@ fn (mut sys System) fetch() u16 {
 	return u16(b1 << 8 + b2)
 }
 
+// clear screen
+fn (mut sys System) clear_screen() {
+	for i in 0 .. sys.scr.len {
+		for j in 0 .. sys.scr[i].len {
+			sys.scr[i][j] = false
+		}
+	}
+}
+
 // decode the current instruction
 fn (mut sys System) decode() {
 	ins := sys.fetch()
@@ -82,11 +92,7 @@ fn (mut sys System) decode() {
 			match ins {
 				// clear screen
 				0x00E0 {
-					for i in 0 .. sys.scr.len {
-						for j in 0 .. sys.scr[i].len {
-							sys.scr[i][j] = false
-						}
-					}
+					sys.clear_screen()
 				}
 				// subroutine
 				0x00EE {
@@ -309,7 +315,25 @@ fn (mut sys System) decode() {
 	}
 }
 
-fn init(mut sys System) {
+fn (mut sys System) load_file(file string) {
+	// clear memory
+	for i in 0 .. sys.memory.len {
+		sys.memory[i] = u8(0)
+	}
+
+	// clear screen
+	sys.clear_screen()
+
+	// clear registers
+	sys.i = u16(0)
+	sys.stack.clear()
+	sys.delay = u8(0)
+	sys.sound = u8(0)
+	for i in 0..sys.v.len {
+		sys.v[i] = u8(0)
+	}
+
+	// define font
 	font := [
 		[u8(0xF), u8(0x0), u8(0x9), u8(0x0), u8(0x9), u8(0x0), u8(0x9), u8(0x0), u8(0xF), u8(0x0)],
 		[u8(0x2), u8(0x0), u8(0x6), u8(0x0), u8(0x2), u8(0x0), u8(0x2), u8(0x0), u8(0x7), u8(0x0)],
@@ -336,8 +360,8 @@ fn init(mut sys System) {
 		}
 	}
 
-	// write program to memory
-	bytes := os.read_bytes('tetris.ch8') or { panic(err) }
+	// read file into memory
+	bytes := os.read_bytes(file) or { return }
 	println('ROM size: ${bytes.len} bytes')
 
 	for i, v in bytes {
@@ -346,6 +370,10 @@ fn init(mut sys System) {
 
 	// set pc to start of program
 	sys.pc = u16(0x200)
+}
+
+fn init(mut sys System) {
+	sys.load_file('fishie.ch8')
 }
 
 fn (mut sys System) update() {
@@ -404,6 +432,12 @@ fn on_event(e &gg.Event, mut sys System) {
 			sys.on_key_down(e.key_code)
 			sys.pressed = true
 		}
+		.files_dropped {
+			num_dropped := sapp.get_num_dropped_files()
+			if num_dropped == 1 {
+				sys.load_file(sapp.get_dropped_file_path(0))
+			}
+		}
 		else {
 			sys.pressed = false
 		}
@@ -427,6 +461,7 @@ fn main() {
 		height:           32 * scale
 		scale:            20.0
 		enable_dragndrop: true
+		max_dropped_files: 1
 		bg_color:         gx.black
 		window_title:     'chipv8'
 		init_fn:          init
