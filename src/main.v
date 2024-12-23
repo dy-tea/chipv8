@@ -54,62 +54,68 @@ fn (mut sys System) decode() {
 
 	nnn := ins & 0x0FFF
 	n := ins & 0x000F
-	x := (ins >> 8) & 0x000F
-	mut y := (ins >> 4) & 0x000F
+	x := (ins & 0x0F00) >> 8
+	mut y := (ins & 0x00F0) >> 4
 	kk := u8(ins & 0x00FF)
 
 	println('Call: 0x${int(ins):X}, PC: ${int(sys.pc)}')
 
-	match true {
-		// clear screen
-		ins == 0x00E0 {
-			for i in 0 .. sys.scr.len {
-				for j in 0 .. sys.scr[i].len {
-					sys.scr[i][j] = false
+	match ins & 0xF000 {
+		0x0000 {
+			match ins {
+				// clear screen
+				0x00E0 {
+					for i in 0 .. sys.scr.len {
+						for j in 0 .. sys.scr[i].len {
+							sys.scr[i][j] = false
+						}
+					}
+				}
+				// subroutine
+				0x00EE {
+					sys.pc = sys.pop()
+				}
+				else {
+					eprintln('ERROR: unknown opcode 0x${int(ins):X}')
 				}
 			}
 		}
-		// subroutine
-		ins == 0x00EE, (ins & 0xF000) == 0x2000 {
-			sys.pc = sys.pop()
+		// set pc, nnn
+		0x1000 {
+			sys.pc = nnn
 		}
-		// jump nnn
-		(ins & 0xF000) == 0x1000 {
+		// call subroutine
+		0x2000 {
+			sys.push(sys.pc)
 			sys.pc = nnn
 		}
 		// skip v[x], kk
-		(ins & 0xF000) == 0x3000 {
+		0x3000 {
 			if sys.v[int(x)] == kk {
 				sys.pc += 2
 			}
 		}
 		// skip v[x], not kk
-		(ins & 0xF000) == 0x4000 {
+		0x4000 {
 			if sys.v[int(x)] != kk {
 				sys.pc += 2
 			}
 		}
 		// skip v[x], v[y]
-		(ins & 0xF000) == 0x5000 {
+		0x5000 {
 			if sys.v[int(x)] == sys.v[int(y)] {
 				sys.pc += 2
 			}
 		}
-		// skip v[x], not v[y]
-		(ins & 0xF000) == 0x9000 {
-			if sys.v[int(x)] != sys.v[int(y)] {
-				sys.pc += 2
-			}
-		}
 		// set v[x], kk
-		(ins & 0xF000) == 0x6000 {
+		0x6000 {
 			sys.v[int(x)] = kk
 		}
 		// add v[x], kk
-		(ins & 0xF000) == 0x7000 {
+		0x7000 {
 			sys.v[int(x)] += kk
 		}
-		(ins & 0xF000) == 0x8000 {
+		0x8000 {
 			match ins & 0x000F {
 				// set v[x], v[y]
 				0x0 {
@@ -172,20 +178,26 @@ fn (mut sys System) decode() {
 				}
 			}
 		}
+		// skip v[x], not v[y]
+		0x9000 {
+			if sys.v[int(x)] != sys.v[int(y)] {
+				sys.pc += 2
+			}
+		}
 		// set i, nnn
-		(ins & 0xF000) == 0xA000 {
+		0xA000 {
 			sys.i = nnn
 		}
-		// jump nnn offset
-		(ins & 0xF000) == 0xB000 {
-			sys.pc = x << 8 + kk + sys.v[int(x)]
+		// set pc, nnn + v[0]
+		0xB000 {
+			sys.pc = nnn + sys.v[0]
 		}
-		// random
-		(ins & 0xF000) == 0xC000 {
+		// set v[x], random & kk
+		0xC000 {
 			sys.v[int(x)] = rand.u8() & kk
 		}
 		// display
-		(ins & 0xF000) == 0xD000 {
+		0xD000 {
 			x_coord := sys.v[int(x)] & 63
 			y_coord := sys.v[int(y)] & 31
 			sys.v[0xF] = 0
@@ -205,64 +217,74 @@ fn (mut sys System) decode() {
 				}
 			}
 		}
-		// skip key, v[x] pressed
-		(ins & 0xF0FF) == 0xE09E {
-			if sys.pressed && sys.key == sys.v[int(x)] {
-				sys.pc += 2
+		0xE000 {
+			match ins & 0x00FF {
+				// skip key, v[x] pressed
+				0x9E {
+					if sys.pressed && sys.key == sys.v[int(x)] {
+						sys.pc += 2
+					}
+				}
+				// skip key, v[x] not pressed
+				0xA1 {
+					if !sys.pressed && sys.key == sys.v[int(x)] {
+						sys.pc += 2
+					}
+				}
+				else {
+					eprintln('ERROR: unknown opcode 0x${int(ins):X}')
+				}
 			}
 		}
-		// skip key, v[x] not pressed
-		(ins & 0xF0FF) == 0xE0A1 {
-			if !sys.pressed && sys.key == sys.v[int(x)] {
-				sys.pc += 2
+		0xF000 {
+			match ins & 0xFF {
+				// set v[x], delay
+				0x07 {
+					sys.v[int(x)] = sys.delay
+				}
+				// set delay, v[x]
+				0x15 {
+					sys.delay = sys.v[int(x)]
+				}
+				// set sound, v[x]
+				0x18 {
+					sys.sound = sys.v[int(x)]
+				}
+				// add i, v[x]
+				0x1E {
+					sys.i += sys.v[int(x)]
+				}
+				// get key
+				0x0A {
+					sys.pc -= 2
+					sys.v[int(x)] = sys.key
+				}
+				// font character
+				0x29 {
+					sys.i = sys.v[int(x)] * u16(10)
+				}
+				// bcd conversion
+				0x33 {
+					sys.memory[int(sys.i)] = u8(sys.v[int(x)] / 100 % 10)
+					sys.memory[int(sys.i) + 1] = u8(sys.v[int(x)] / 10 % 10)
+					sys.memory[int(sys.i) + 2] = u8(sys.v[int(x)] % 10)
+				}
+				// store
+				0x55 {
+					for i in 0 .. x {
+						sys.memory[i + sys.i] = sys.v[i]
+					}
+				}
+				// load
+				0x65 {
+					for i in 0 .. x {
+						sys.v[i] = sys.memory[i + sys.i]
+					}
+				}
+				else {
+					eprintln('ERROR: unknown opcode 0x${int(ins):X}')
+				}
 			}
-		}
-		// set v[x], delay
-		(ins & 0xF00F) == 0xF007 {
-			sys.v[int(x)] = sys.delay
-		}
-		// set delay, v[x]
-		(ins & 0xF0FF) == 0xF015 {
-			sys.delay = sys.v[int(x)]
-		}
-		// set sound, v[x]
-		(ins & 0xF0FF) == 0xF018 {
-			sys.sound = sys.v[int(x)]
-		}
-		// add i, v[x]
-		(ins & 0xF0FF) == 0xF01E {
-			sys.i += sys.v[int(x)]
-		}
-		// get key
-		(ins & 0xF00F) == 0xF00A {
-			sys.pc -= 2
-		}
-		// font character
-		(ins & 0xF0FF) == 0xF029 {
-			sys.i = sys.v[int(x)] * u16(10)
-		}
-		// bcd conversion
-		(ins & 0xF0FF) == 0xF033 {
-			h := u16(sys.v[int(x)] / 100 % 10)
-			t := u16(sys.v[int(x)] / 10 % 10)
-			o := u16(sys.v[int(x)] % 10)
-
-			sys.i = h + t << 4 + o << 8
-		}
-		// store
-		(ins & 0xF0FF) == 0xF055 {
-			for i in 0 .. x {
-				sys.memory[i + sys.i] = sys.v[i]
-			}
-		}
-		// load
-		(ins & 0xF0FF) == 0xF065 {
-			for i in 0 .. x {
-				sys.v[i] = sys.memory[i + sys.i]
-			}
-		}
-		ins == 0x0 {
-			exit(0)
 		}
 		else {
 			eprintln('ERROR: unknown opcode 0x${int(ins):X}')
@@ -312,8 +334,12 @@ fn init(mut sys System) {
 fn (mut sys System) update() {
 	// update timers at 60hz
 	if sys.frame % 60 == 0 {
-		sys.delay = if sys.delay == 0 { u8(8) } else { u8(0) }
-		sys.sound = if sys.sound == 0 { u8(8) } else { u8(0) }
+		if sys.delay > 0 {
+			sys.delay -= 1
+		}
+		if sys.sound > 0 {
+			sys.sound -= 1
+		}
 	}
 	sys.decode()
 }
