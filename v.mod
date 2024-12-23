@@ -3,5 +3,5 @@ Module {
 	description: 'chip-8 emulator'
 	version: '0.0.0'
 	license: 'MIT'
-	dependencies: []
+	dependencies: ['https://github.com/dy-tea/vbmp']
 }
