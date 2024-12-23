@@ -39,7 +39,7 @@ mut:
 	scr    [64][32]bool
 
 	pressed bool
-	key Keys
+	key     Keys
 
 	gg    &gg.Context = unsafe { nil }
 	frame int
@@ -329,7 +329,7 @@ fn (mut sys System) load_file(file string) {
 	sys.stack.clear()
 	sys.delay = u8(0)
 	sys.sound = u8(0)
-	for i in 0..sys.v.len {
+	for i in 0 .. sys.v.len {
 		sys.v[i] = u8(0)
 	}
 
@@ -378,12 +378,12 @@ fn init(mut sys System) {
 
 fn (mut sys System) update() {
 	// update timers at 60hz
-		if sys.delay > 0 {
-			sys.delay -= 1
-		}
-		if sys.sound > 0 {
-			sys.sound -= 1
-		}
+	if sys.delay > 0 {
+		sys.delay -= 1
+	}
+	if sys.sound > 0 {
+		sys.sound -= 1
+	}
 
 	// run instruction
 	sys.decode()
@@ -407,7 +407,7 @@ fn (mut sys System) on_key_down(key gg.KeyCode) {
 	match key {
 		.escape { sys.gg.quit() }
 		._1 { sys.key = .one }
-	 	._2 { sys.key = .two }
+		._2 { sys.key = .two }
 		._3 { sys.key = .three }
 		._4 { sys.key = .four }
 		.q { sys.key = .q }
@@ -457,17 +457,17 @@ fn main() {
 	mut system := &System{}
 
 	system.gg = gg.new_context(
-		width:            64 * scale
-		height:           32 * scale
-		scale:            20.0
-		enable_dragndrop: true
+		width:             64 * scale
+		height:            32 * scale
+		scale:             20.0
+		enable_dragndrop:  true
 		max_dropped_files: 1
-		bg_color:         gx.black
-		window_title:     'chipv8'
-		init_fn:          init
-		frame_fn:         frame
-		event_fn:         on_event
-		user_data:        system
+		bg_color:          gx.black
+		window_title:      'chipv8'
+		init_fn:           init
+		frame_fn:          frame
+		event_fn:          on_event
+		user_data:         system
 	)
 
 	system.gg.run()
