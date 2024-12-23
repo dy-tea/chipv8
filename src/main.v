@@ -8,6 +8,7 @@ import sokol.sapp
 
 const scale = 20
 
+// emulated keys
 enum Keys {
 	one
 	two
@@ -27,6 +28,7 @@ enum Keys {
 	v
 }
 
+// chip-8 system
 struct System {
 mut:
 	memory [4096]u8
@@ -37,6 +39,8 @@ mut:
 	sound  u8 // TODO play beep when sound timer is above 0
 	v      [16]u8
 	scr    [64][32]bool
+
+	paused bool
 
 	pressed bool
 	key     Keys
@@ -79,6 +83,11 @@ fn (mut sys System) clear_screen() {
 // decode the current instruction
 fn (mut sys System) decode() {
 	ins := sys.fetch()
+
+	if sys.paused {
+		return
+	}
+
 	sys.pc += 2
 
 	nnn := ins & 0x0FFF
@@ -400,6 +409,10 @@ fn (sys &System) draw() {
 		}
 	}
 
+	if sys.paused {
+		sys.gg.draw_text_default(48, 8, 'PAUSED')
+	}
+
 	sys.gg.show_fps()
 }
 
@@ -422,6 +435,7 @@ fn (mut sys System) on_key_down(key gg.KeyCode) {
 		.x { sys.key = .x }
 		.c { sys.key = .c }
 		.v { sys.key = .v }
+		.space { sys.paused = !sys.paused }
 		else {}
 	}
 }
