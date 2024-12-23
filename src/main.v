@@ -131,7 +131,7 @@ fn (mut sys System) decode() {
 				}
 				// logical xor v[x], v[y]
 				0x3 {
-					sys.v[int(x)] = u8(sys.v[int(x)] != sys.v[int(y)])
+					sys.v[int(x)] ^= sys.v[int(y)]
 				}
 				// add v[x], v[y] with carry
 				0x4 {
@@ -146,12 +146,11 @@ fn (mut sys System) decode() {
 				}
 				// sub v[x], v[y] with carry
 				0x5 {
+					sys.v[0xF] = u8(0)
 					if sys.v[int(x)] > sys.v[int(y)] {
 						sys.v[0xF] = u8(1)
-						sys.v[int(x)] -= sys.v[int(y)]
-					} else {
-						sys.v[int(x)] = u8(u16(255) + u16(sys.v[int(x)]) - sys.v[int(y)])
 					}
+					sys.v[int(x)] -= sys.v[int(y)]
 				}
 				// shift v[x], v[y] right
 				0x6 {
@@ -271,13 +270,13 @@ fn (mut sys System) decode() {
 				}
 				// store
 				0x55 {
-					for i in 0 .. x {
+					for i in 0 .. x + 1 {
 						sys.memory[i + sys.i] = sys.v[i]
 					}
 				}
 				// load
 				0x65 {
-					for i in 0 .. x {
+					for i in 0 .. x + 1 {
 						sys.v[i] = sys.memory[i + sys.i]
 					}
 				}
