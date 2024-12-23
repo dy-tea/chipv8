@@ -7,6 +7,25 @@ import rand
 
 const scale = 20
 
+enum Keys {
+	one
+	two
+	three
+	four
+	q
+	w
+	e
+	r
+	a
+	s
+	d
+	f
+	z
+	x
+	c
+	v
+}
+
 struct System {
 mut:
 	memory [4096]u8
@@ -19,7 +38,7 @@ mut:
 	scr    [64][32]bool
 
 	pressed bool
-	key     u8
+	key Keys
 
 	gg    &gg.Context = unsafe { nil }
 	frame int
@@ -57,8 +76,6 @@ fn (mut sys System) decode() {
 	x := (ins & 0x0F00) >> 8
 	mut y := (ins & 0x00F0) >> 4
 	kk := u8(ins & 0x00FF)
-
-	println('Call: 0x${int(ins):X}, PC: ${int(sys.pc)}')
 
 	match ins & 0xF000 {
 		0x0000 {
@@ -167,6 +184,7 @@ fn (mut sys System) decode() {
 						sys.v[int(y)] = u8(u16(255) + u16(sys.v[int(y)]) - sys.v[int(x)])
 					}
 				}
+				// shift v[x], v[y] left
 				0xE {
 					sys.v[int(x)] = sys.v[y]
 					sys.v[0xF] = u8(sys.v[int(x)] >= 8)
@@ -220,13 +238,13 @@ fn (mut sys System) decode() {
 			match ins & 0x00FF {
 				// skip key, v[x] pressed
 				0x9E {
-					if sys.pressed && sys.key == sys.v[int(x)] {
+					if sys.pressed && u8(sys.key) == sys.v[int(x)] {
 						sys.pc += 2
 					}
 				}
 				// skip key, v[x] not pressed
 				0xA1 {
-					if !sys.pressed && sys.key == sys.v[int(x)] {
+					if !sys.pressed && u8(sys.key) == sys.v[int(x)] {
 						sys.pc += 2
 					}
 				}
@@ -256,7 +274,7 @@ fn (mut sys System) decode() {
 				// get key
 				0x0A {
 					sys.pc -= 2
-					sys.v[int(x)] = sys.key
+					sys.v[int(x)] = u8(sys.key)
 				}
 				// font character
 				0x29 {
@@ -319,7 +337,7 @@ fn init(mut sys System) {
 	}
 
 	// write program to memory
-	bytes := os.read_bytes('test_opcode.ch8') or { panic(err) }
+	bytes := os.read_bytes('tetris.ch8') or { panic(err) }
 	println('ROM size: ${bytes.len} bytes')
 
 	for i, v in bytes {
@@ -332,14 +350,14 @@ fn init(mut sys System) {
 
 fn (mut sys System) update() {
 	// update timers at 60hz
-	if sys.frame % 60 == 0 {
 		if sys.delay > 0 {
 			sys.delay -= 1
 		}
 		if sys.sound > 0 {
 			sys.sound -= 1
 		}
-	}
+
+	// run instruction
 	sys.decode()
 }
 
@@ -360,19 +378,22 @@ fn (sys &System) draw() {
 fn (mut sys System) on_key_down(key gg.KeyCode) {
 	match key {
 		.escape { sys.gg.quit() }
-		._1, ._2, ._3, ._4 { sys.key = u8(u16(key) - 49) }
-		.q { sys.key = u8(0x4) }
-		.w { sys.key = u8(0x5) }
-		.e { sys.key = u8(0x6) }
-		.r { sys.key = u8(0x7) }
-		.a { sys.key = u8(0x8) }
-		.s { sys.key = u8(0x9) }
-		.d { sys.key = u8(0xA) }
-		.f { sys.key = u8(0xB) }
-		.z { sys.key = u8(0xC) }
-		.x { sys.key = u8(0xD) }
-		.c { sys.key = u8(0xE) }
-		.v { sys.key = u8(0xF) }
+		._1 { sys.key = .one }
+	 	._2 { sys.key = .two }
+		._3 { sys.key = .three }
+		._4 { sys.key = .four }
+		.q { sys.key = .q }
+		.w { sys.key = .w }
+		.e { sys.key = .e }
+		.r { sys.key = .r }
+		.a { sys.key = .a }
+		.s { sys.key = .s }
+		.d { sys.key = .d }
+		.f { sys.key = .f }
+		.z { sys.key = .z }
+		.x { sys.key = .x }
+		.c { sys.key = .c }
+		.v { sys.key = .v }
 		else {}
 	}
 }
@@ -380,8 +401,8 @@ fn (mut sys System) on_key_down(key gg.KeyCode) {
 fn on_event(e &gg.Event, mut sys System) {
 	match e.typ {
 		.key_down {
-			sys.pressed = true
 			sys.on_key_down(e.key_code)
+			sys.pressed = true
 		}
 		else {
 			sys.pressed = false
