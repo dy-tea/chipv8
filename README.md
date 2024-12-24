@@ -1,5 +1,5 @@
 # chipv8
-__A CHIP-8 emulator written in V__
+_A CHIP-8 emulator written in V_
 
 ### Building
 ```
