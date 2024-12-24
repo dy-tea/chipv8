@@ -81,6 +81,7 @@ fn (mut sys System) clear_screen() {
 	}
 }
 
+// take a screenshot and save it to a bmp file
 fn (mut sys System) print_screen() {
 	mut bmp := vbmp.new(64, 32)
 	for i in 0 .. sys.scr.len {
@@ -94,11 +95,11 @@ fn (mut sys System) print_screen() {
 
 // decode the current instruction
 fn (mut sys System) decode() {
-	ins := sys.fetch()
-
 	if sys.paused {
 		return
 	}
+
+	ins := sys.fetch()
 
 	sys.pc += 2
 

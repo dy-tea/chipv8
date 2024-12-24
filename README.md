@@ -19,3 +19,5 @@ q w e r
 a s d f
 z x c v
 ```
+Press space to start/stop the emulation.
+Press `p` to create a screenshot of the current frame and save it to a bmp file.
