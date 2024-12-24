@@ -85,9 +85,9 @@ fn (mut sys System) clear_screen() {
 fn (mut sys System) print_screen() {
 	mut bmp := vbmp.new(64, 32)
 	for i in 0 .. sys.scr.len {
-		for j in 0 .. sys.scr[i].len {
+		for j in 0..sys.scr[i].len {
 			color := u8(if sys.scr[i][j] { 255 } else { 0 })
-			bmp.set_pixel(i, j, color, color, color) or { panic(err) }
+			bmp.set_pixel(i, u32(sys.scr[i].len - j - 1), color, color, color) or { panic(err) }
 		}
 	}
 	bmp.write('${sys.frame}.bmp') or { panic(err) }
