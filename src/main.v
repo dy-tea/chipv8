@@ -5,7 +5,6 @@ import gx
 import os
 import rand
 import sokol.sapp
-
 import vbmp
 
 const scale = 20
@@ -85,7 +84,7 @@ fn (mut sys System) clear_screen() {
 fn (mut sys System) print_screen() {
 	mut bmp := vbmp.new(64, 32)
 	for i in 0 .. sys.scr.len {
-		for j in 0..sys.scr[i].len {
+		for j in 0 .. sys.scr[i].len {
 			color := u8(if sys.scr[i][j] { 255 } else { 0 })
 			bmp.set_pixel(i, u32(sys.scr[i].len - j - 1), color, color, color) or { panic(err) }
 		}
@@ -487,7 +486,7 @@ fn main() {
 	system.gg = gg.new_context(
 		width:             64 * scale
 		height:            32 * scale
-		scale:             20.0
+		scale:             f32(scale)
 		enable_dragndrop:  true
 		max_dropped_files: 1
 		bg_color:          gx.black
