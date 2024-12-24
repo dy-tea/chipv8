@@ -1,6 +1,8 @@
 # chipv8
 _A CHIP-8 emulator written in V_
 
+![screenshot](screenshot.bmp)
+
 ### Building
 ```
 git clone https://github.com/dy-tea/chipv8.git
